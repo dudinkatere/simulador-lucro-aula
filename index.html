@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador de Resultados · Método Explosão de Vendas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --neon-cyan: #00f5ff;
+      --neon-purple: #bf00ff;
+      --neon-green: #00ff88;
+      --neon-pink: #ff006e;
+      --bg-dark: #03040a;
+      --bg-card: rgba(255,255,255,0.04);
+      --border-glow: rgba(0,245,255,0.25);
+      --text-primary: #e8f4f8;
+      --text-muted: rgba(232,244,248,0.55);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated grid background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,245,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,245,255,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* radial spotlight */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 900px;
+      background: radial-gradient(ellipse, rgba(191,0,255,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Top label ── */
+    .top-label {
+      text-align: center;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--neon-cyan);
+      opacity: 0.75;
+      margin-bottom: 28px;
+    }
+
+    /* ── Headline ── */
+    .headline {
+      text-align: center;
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.5rem, 4vw, 2.4rem);
+      font-weight: 900;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #ffffff 0%, var(--neon-cyan) 60%, var(--neon-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 18px;
+    }
+
+    .subheadline {
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 300;
+      color: var(--text-muted);
+      line-height: 1.65;
+      max-width: 580px;
+      margin: 0 auto 52px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+      margin-bottom: 48px;
+      opacity: 0.4;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-glow);
+      border-radius: 20px;
+      padding: 40px 36px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 40px rgba(0,245,255,0.06), inset 0 1px 0 rgba(255,255,255,0.06);
+      margin-bottom: 32px;
+    }
+
+    .card-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--neon-cyan);
+      margin-bottom: 28px;
+    }
+
+    /* ── Fields ── */
+    .field-group { display: flex; flex-direction: column; gap: 24px; }
+
+    .field-wrap { display: flex; flex-direction: column; gap: 8px; }
+
+    .field-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .phase-badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+    .badge-cyan { background: rgba(0,245,255,0.15); color: var(--neon-cyan); border: 1px solid rgba(0,245,255,0.3); }
+    .badge-purple { background: rgba(191,0,255,0.15); color: var(--neon-purple); border: 1px solid rgba(191,0,255,0.3); }
+
+    .field-input-wrap { position: relative; }
+
+    .field-prefix {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--neon-cyan);
+      font-weight: 600;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    input[type="number"], input[type="text"] {
+      width: 100%;
+      background: rgba(0,245,255,0.04);
+      border: 1px solid rgba(0,245,255,0.2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 1rem;
+      font-family: 'Inter', sans-serif;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      appearance: none;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    input.with-prefix { padding-left: 38px; }
+
+    input:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 0 3px rgba(0,245,255,0.12), 0 0 20px rgba(0,245,255,0.08);
+    }
+
+    input:disabled, input[readonly] {
+      background: rgba(191,0,255,0.06);
+      border-color: rgba(191,0,255,0.25);
+      color: var(--neon-purple);
+      cursor: not-allowed;
+    }
+
+    .field-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      padding-left: 2px;
+    }
+
+    /* ── Button ── */
+    .btn-simulate {
+      width: 100%;
+      margin-top: 8px;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      border: none;
+      border-radius: 12px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #03040a;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.3s;
+      box-shadow: 0 4px 32px rgba(0,245,255,0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-simulate::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      pointer-events: none;
+    }
+    .btn-simulate:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 48px rgba(0,245,255,0.4), 0 0 80px rgba(191,0,255,0.2);
+    }
+    .btn-simulate:active { transform: translateY(0); }
+
+    /* ── Results ── */
+    #results { display: none; }
+    #results.visible { display: block; animation: fadeUp 0.5s ease; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .results-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-align: center;
+      color: var(--neon-cyan);
+      margin-bottom: 28px;
+    }
+
+    .scenarios-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 20px;
+    }
+
+    .scenario-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 28px 22px;
+      text-align: center;
+      border: 1px solid;
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .scenario-card:hover { transform: translateY(-4px); }
+
+    .scenario-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    /* Conservative */
+    .card-conservador {
+      border-color: rgba(0,245,255,0.2);
+      box-shadow: 0 0 30px rgba(0,245,255,0.05);
+    }
+    .card-conservador::before { background: var(--neon-cyan); }
+
+    /* Moderate */
+    .card-moderado {
+      border-color: rgba(191,0,255,0.3);
+      box-shadow: 0 0 30px rgba(191,0,255,0.08);
+    }
+    .card-moderado::before { background: var(--neon-purple); }
+
+    /* Optimistic */
+    .card-otimista {
+      border-color: rgba(0,255,136,0.3);
+      box-shadow: 0 0 30px rgba(0,255,136,0.08);
+    }
+    .card-otimista::before { background: var(--neon-green); }
+
+    .scenario-badge {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+    .card-conservador .scenario-badge { background: rgba(0,245,255,0.12); color: var(--neon-cyan); }
+    .card-moderado   .scenario-badge { background: rgba(191,0,255,0.12); color: var(--neon-purple); }
+    .card-otimista   .scenario-badge { background: rgba(0,255,136,0.12); color: var(--neon-green); }
+
+    .scenario-name {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+    }
+
+    .scenario-meta { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; }
+    .scenario-meta strong { color: var(--text-primary); }
+
+    .scenario-revenue {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(0.85rem, 2.5vw, 1.4rem);
+      font-weight: 900;
+      margin: 18px 0 6px;
+      line-height: 1.2;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    .card-conservador .scenario-revenue { color: var(--neon-cyan); text-shadow: 0 0 20px rgba(0,245,255,0.4); }
+    .card-moderado   .scenario-revenue { color: var(--neon-purple); text-shadow: 0 0 20px rgba(191,0,255,0.4); }
+    .card-otimista   .scenario-revenue { color: var(--neon-green); text-shadow: 0 0 20px rgba(0,255,136,0.4); }
+
+    .scenario-label { font-size: 0.68rem; color: var(--text-muted); letter-spacing: 0.05em; }
+
+    .separator { margin: 16px 0; height: 1px; background: rgba(255,255,255,0.06); }
+
+    .scenario-conversions {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+    .scenario-conversions span { color: var(--text-primary); font-weight: 600; }
+
+    /* recommended glow ring */
+    .card-otimista { position: relative; }
+    .recommended-tag {
+      position: absolute;
+      top: 14px; right: 14px;
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: var(--neon-green);
+      color: #03040a;
+      padding: 3px 8px;
+      border-radius: 20px;
+    }
+
+    /* ── Footer note ── */
+    .footer-note {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 36px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 520px) {
+      .card { padding: 28px 20px; }
+      .wrapper { padding: 32px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Top label -->
+  <p class="top-label">simulador de resultados</p>
+
+  <!-- Headline -->
+  <h1 class="headline">Simule quanto você pode faturar com o Método Explosão de Vendas</h1>
+
+  <!-- Subheadline -->
+  <p class="subheadline">
+    Insira os dados da sua empresa e veja o potencial de faturamento com base no cenário da sua base de contatos.
+  </p>
+
+  <div class="divider"></div>
+
+  <!-- Form card -->
+  <div class="card">
+    <p class="card-title">// Dados da sua empresa</p>
+
+    <div class="field-group">
+
+      <!-- Field 1: Contacts -->
+      <div class="field-wrap">
+        <label class="field-label" for="contacts">
+          Número de contatos na sua base
+        </label>
+        <div class="field-input-wrap">
+          <input type="number" id="contacts" placeholder="Ex: 500" min="1" />
+        </div>
+        <span class="field-hint">Total de leads, clientes e contatos cadastrados</span>
+      </div>
+
+      <!-- Field 2: Phase 1 conversion (fixed) -->
+      <div class="field-wrap">
+        <label class="field-label" for="rate1">
+          <span class="phase-badge badge-cyan">Fase 1</span>
+          Taxa de conversão para o grupo
+        </label>
+        <div class="field-input-wrap">
+          <input type="text" id="rate1" value="10%" readonly />
+        </div>
+        <span class="field-hint">Media de contatos que entram no grupo</span>
+      </div>
+
+      <!-- Field 3: Average ticket -->
+      <div class="field-wrap">
+        <label class="field-label" for="ticket">
+          Valor médio do procedimento (R$)
+        </label>
+        <div class="field-input-wrap">
+          <span class="field-prefix">R$</span>
+          <input type="number" id="ticket" class="with-prefix" placeholder="Ex: 350,00" min="1" step="0.01" />
+        </div>
+        <span class="field-hint">Ticket médio dos seus serviços ou produtos</span>
+      </div>
+
+      <!-- Field 4: Phase 2 conversion (fixed) -->
+      <div class="field-wrap">
+        <label class="field-label" for="rate2">
+          <span class="phase-badge badge-purple">Fase 2</span>
+          Taxa de conversão em vendas
+        </label>
+        <div class="field-input-wrap">
+          <input type="text" id="rate2" value="10%" readonly />
+        </div>
+        <span class="field-hint">Media de pessoa que compram no dia das vendas</span>
+      </div>
+
+    </div>
+
+    <button class="btn-simulate" onclick="simulate()">⚡ Simular Resultado</button>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <p class="results-title">// Projeção de Cenários</p>
+
+    <div class="scenarios-grid">
+
+      <!-- Conservador -->
+      <div class="scenario-card card-conservador">
+        <span class="scenario-badge">Cenário 01</span>
+        <div class="scenario-name">Conservador</div>
+        <div class="scenario-meta">Conversão Fase 2: <strong>5%</strong></div>
+        <div class="scenario-revenue" id="rev-conservador">R$ 0</div>
+        <div class="scenario-label">faturamento estimado</div>
+        <div class="separator"></div>
+        <div class="scenario-conversions">
+          <span id="group-conservador">0</span> pessoas no grupo<br/>
+          <span id="sales-conservador">0</span> vendas realizadas
+        </div>
+      </div>
+
+      <!-- Moderado -->
+      <div class="scenario-card card-moderado">
+        <span class="scenario-badge">Cenário 02</span>
+        <div class="scenario-name">Moderado</div>
+        <div class="scenario-meta">Conversão Fase 2: <strong>10%</strong></div>
+        <div class="scenario-revenue" id="rev-moderado">R$ 0</div>
+        <div class="scenario-label">faturamento estimado</div>
+        <div class="separator"></div>
+        <div class="scenario-conversions">
+          <span id="group-moderado">0</span> pessoas no grupo<br/>
+          <span id="sales-moderado">0</span> vendas realizadas
+        </div>
+      </div>
+
+      <!-- Otimista -->
+      <div class="scenario-card card-otimista">
+        <span class="recommended-tag">★ Otimista</span>
+        <span class="scenario-badge">Cenário 03</span>
+        <div class="scenario-name">Otimista</div>
+        <div class="scenario-meta">Conversão Fase 2: <strong>20%</strong></div>
+        <div class="scenario-revenue" id="rev-otimista">R$ 0</div>
+        <div class="scenario-label">faturamento estimado</div>
+        <div class="separator"></div>
+        <div class="scenario-conversions">
+          <span id="group-otimista">0</span> pessoas no grupo<br/>
+          <span id="sales-otimista">0</span> vendas realizadas
+        </div>
+      </div>
+
+    </div>
+
+    <p class="footer-note">
+      * Projeções baseadas em taxas de conversão do Método Explosão de Vendas.<br/>
+      Os resultados reais podem variar conforme o nicho, oferta e engajamento da base.
+    </p>
+  </div>
+
+</div>
+
+<script>
+  function fmt(value) {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
+  }
+
+  function calcScenario(contacts, ticket, phase1Rate, phase2Rate) {
+    const group = Math.round(contacts * phase1Rate);
+    const sales = Math.round(group * phase2Rate);
+    const revenue = sales * ticket;
+    return { group, sales, revenue };
+  }
+
+  function simulate() {
+    const contacts = parseFloat(document.getElementById('contacts').value);
+    const ticket   = parseFloat(document.getElementById('ticket').value);
+
+    if (!contacts || contacts <= 0 || !ticket || ticket <= 0) {
+      shake(document.querySelector('.card'));
+      return;
+    }
+
+    const phase1 = 0.10; // fixed 10%
+
+    const scenarios = [
+      { key: 'conservador', phase2: 0.05 },
+      { key: 'moderado',    phase2: 0.10 },
+      { key: 'otimista',    phase2: 0.20 },
+    ];
+
+    scenarios.forEach(({ key, phase2 }) => {
+      const { group, sales, revenue } = calcScenario(contacts, ticket, phase1, phase2);
+      document.getElementById(`rev-${key}`).textContent   = fmt(revenue);
+      document.getElementById(`group-${key}`).textContent = group.toLocaleString('pt-BR');
+      document.getElementById(`sales-${key}`).textContent = sales.toLocaleString('pt-BR');
+    });
+
+    const results = document.getElementById('results');
+    results.classList.add('visible');
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function shake(el) {
+    el.animate([
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(-8px)' },
+      { transform: 'translateX(8px)' },
+      { transform: 'translateX(-6px)' },
+      { transform: 'translateX(6px)' },
+      { transform: 'translateX(0)' },
+    ], { duration: 400, easing: 'ease-in-out' });
+  }
+
+  // Allow Enter key to simulate
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') simulate();
+  });
+</script>
+</body>
+</html>
