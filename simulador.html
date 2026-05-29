@@ -421,7 +421,7 @@
           Taxa de conversão para o grupo
         </label>
         <div class="field-input-wrap">
-          <input type="text" id="rate1" value="10%" readonly />
+          <input type="text" id="rate1" value="—" readonly />
         </div>
         <span class="field-hint">Media de contatos que entram no grupo</span>
       </div>
@@ -445,7 +445,7 @@
           Taxa de conversão em vendas
         </label>
         <div class="field-input-wrap">
-          <input type="text" id="rate2" value="10%" readonly />
+          <input type="text" id="rate2" value="—" readonly />
         </div>
         <span class="field-hint">Media de pessoa que compram no dia das vendas</span>
       </div>
@@ -565,6 +565,16 @@
       { transform: 'translateX(0)' },
     ], { duration: 400, easing: 'ease-in-out' });
   }
+
+  function updatePreviewFields() {
+    const contacts = parseFloat(document.getElementById('contacts').value);
+    const group = contacts > 0 ? Math.round(contacts * 0.10) : null;
+    const sales = group !== null ? Math.round(group * 0.10) : null;
+    document.getElementById('rate1').value = group !== null ? group + ' contatos' : '—';
+    document.getElementById('rate2').value = sales !== null ? sales + ' pessoas' : '—';
+  }
+
+  document.getElementById('contacts').addEventListener('input', updatePreviewFields);
 
   // Allow Enter key to simulate
   document.addEventListener('keydown', e => {
